@@ -1,0 +1,53 @@
+library(XML)
+library(randomNames)
+library(data.table)
+Sys.setlocale("LC_CTYPE", "russian")
+
+#варьируемые в кейсе данные
+names.russian <- fread("https://trello-attachments.s3.amazonaws.com/590742047858735157c48ab8/593a6115b1904bea2f8493b9/76fb70919690669761f09567e74ae8fc/names.csv")
+names.russian <- as.data.table(apply(names.russian, 2, function (g) {Encoding(g) <- "UTF-8"; return(g)}), stringsAsFactors = F)
+names.russian$gender <- c(rep("male", 60), rep("female", 60))
+names.english <- randomNames(120, ethnicity = 5, name.order = "first.last", name.sep = " ")
+names.area <- data.table(text = c("Gallery", "Craft", "Artworks", "Art", "Craft", "Coffee", "Shop", "Cafe", "Joint", "Cafeteria"),
+                         between.cases.setting = c(rep("frames", 5), rep("coffee", 5)))
+names.categories <- c("фрилансер", "художник", "бизнесмен", "программист", "дизайнер")
+client.experiences <- data.table(text = c("доставка была дорогой и долгой", "доставка была быстрой и дешевой",
+                                         "товар отпускали со скидкой", "товар отпускали без скидки"),
+                                experience = c("positive", "negative", "positive", "negative"),
+                                in.case.setting = c("delivery", "delivery", "discounting", "discounting"))
+client.actions <- data.table(text = c("заказывал", "заказывала"), gender = c("male", "female"))
+products <- data.table(text = c("рамки", "кофе"), between.case.setting = c("frames", "coffee"))
+company.descriptions <- data.table(text = c("Компания специализируется на продаже картин и рамок к ним.",
+                                            "Компания специализируется на продаже кофе на вынос и с доставкой на дом."),
+                                   between.case.setting = c("frames", "coffee"))
+company.experience <- data.table(text = c(""))
+
+#генерация параметров конкретного кейса
+value.in.case.setting = sample(c("delivery", "discounting"), 1)
+value.between.case.setting = sample(c("frames", "coffee"), 1)
+value.client.experience = sample(c("positive", "negative"), 1)
+value.client.gender = sample(c("male", "female"), 1)
+value.manager.gender = sample(c("male", "female"), 1)
+value.client.name = sample(1:60, 1)
+value.manager.name = sample(1:60, 1)
+
+#генерация кейса
+#функция для вызова имени клиента в нужном падеже
+client.name <- function(form) {
+  as.character(names.russian[gender == value.client.gender][value.client.name, form, with = F])
+}
+#функция для вызова имени менеджера в нужном падеже
+manager.name <- function(form) {
+  as.character(names.russian[gender == value.manager.gender][value.manager.name, form, with = F])
+}
+
+client.experience <- client.experiences[experience == value.client.experience & in.case.setting == value.in.case.setting, text]
+client.action <- client.actions[gender == value.client.gender, text] 
+company.name <- paste(sample(names.english, 1), sample(names.area[between.cases.setting == value.between.case.setting, text], 1))
+product <- products[between.case.setting == value.between.case.setting, text]
+
+manager.description <- paste0(manager.name(1), " - менеджер по продажам в ", company.name, ".")
+company.description <- company.descriptions[between.case.setting == value.between.case.setting, text]
+client.desription.demorgaphic <- paste0(client.name(1), " - ", sample(names.categories, 1), " ",
+                            sample(seq(20, 40, by = 2), 1), " лет.")
+client.description.experience <- paste0(client.name(1), " уже ", client.action, " ", product, " у ", company.name, " и ", client.experience, ".")
